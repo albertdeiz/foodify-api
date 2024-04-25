@@ -1,0 +1,112 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id              Int             @id @default(autoincrement())
+  first_name      String
+  last_name       String
+  email           String          @unique
+  password        String
+  created_at      DateTime        @default(now())
+  updated_at      DateTime        @updatedAt
+  user_workspaces UserWorkspace[]
+}
+
+model Workspace {
+  id              Int             @id @default(autoincrement())
+  name            String
+  address         String
+  created_at      DateTime        @default(now())
+  updated_at      DateTime        @updatedAt
+  user_workspaces UserWorkspace[]
+  categories      Category[]
+  products        Product[]
+}
+
+model UserWorkspace {
+  created_at   DateTime  @default(now())
+  updated_at   DateTime  @updatedAt
+  user         User      @relation(fields: [user_id], references: [id])
+  user_id      Int
+  workspace    Workspace @relation(fields: [workspace_id], references: [id])
+  workspace_id Int
+
+  @@id([user_id, workspace_id])
+}
+
+model Category {
+  id                 Int               @id @default(autoincrement())
+  name               String
+  workspace          Workspace         @relation(fields: [workspace_id], references: [id])
+  workspace_id       Int
+  product_categories ProductCategory[]
+}
+
+model ProductCategory {
+  product     Product  @relation(fields: [product_id], references: [id])
+  product_id  Int
+  category    Category @relation(fields: [category_id], references: [id])
+  category_id Int
+
+  @@id([product_id, category_id])
+}
+
+model ProductComplementType {
+  id                               Int                            @id @default(autoincrement())
+  name                             String
+  required                         Boolean                        @default(false)
+  max_selectable                   Int                            @default(1)
+  created_at                       DateTime                       @default(now())
+  updated_at                       DateTime                       @updatedAt
+  product_complements              ProductComplement[]
+  product_product_complement_types ProductProductComplementType[]
+}
+
+model ProductProductComplementType {
+  product                    Product               @relation(fields: [product_id], references: [id])
+  product_id                 Int
+  product_complement_type    ProductComplementType @relation(fields: [product_complement_type_id], references: [id])
+  product_complement_type_id Int
+
+  @@id([product_id, product_complement_type_id])
+}
+
+model ProductComplement {
+  id                         Int                   @id @default(autoincrement())
+  name                       String
+  increment                  Boolean
+  is_disabled                Boolean
+  price                      Int                   @default(0)
+  product_complement_type    ProductComplementType @relation(fields: [product_complement_type_id], references: [id])
+  product_complement_type_id Int
+  created_at                 DateTime              @default(now())
+  updated_at                 DateTime              @updatedAt
+}
+
+model Product {
+  id                               Int                            @id @default(autoincrement())
+  name                             String
+  description                      String
+  price                            Int
+  image_url                        String?
+  type                             String                         @default("REGULAR") // COMBO, COMPLEMENTED
+  created_at                       DateTime                       @default(now())
+  content                          String?
+  updated_at                       DateTime                       @updatedAt
+  workspace                        Workspace                      @relation(fields: [workspace_id], references: [id])
+  workspace_id                     Int
+  parent_product                   Product?                       @relation("ProductsRelation", fields: [parent_product_id], references: [id])
+  parent_product_id                Int?
+  products                         Product[]                      @relation("ProductsRelation")
+  product_categories               ProductCategory[]
+  product_product_complement_types ProductProductComplementType[]
+}
