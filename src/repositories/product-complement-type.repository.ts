@@ -1,18 +1,12 @@
-import {
-  PrismaClient,
-  ProductComplement as PrismaProductComplement,
+import { PrismaClient } from "@prisma/client";
+import { ProductComplementRepository } from "./product-complement.repository";
+
+import type {
+  Prisma,
   ProductComplementType as PrismaProductComplementType,
 } from "@prisma/client";
-
-const prisma = new PrismaClient();
-
-interface ProductComplement {
-  id: number;
-  name: string;
-  increment: boolean;
-  isDisabled: boolean;
-  price: number;
-}
+import type { ProductComplement } from "./product-complement.repository";
+import type { DefaultArgs } from "@prisma/client/runtime/library";
 
 export interface ProductComplementType {
   id: number;
@@ -25,12 +19,20 @@ export interface ProductComplementType {
 }
 
 export class ProductComplementTypeRepository {
-  productComplementTypeId: number;
-  workspaceId: number;
+  private productComplementTypeId?: number;
+  private workspaceId: number;
+  private model: Prisma.ProductComplementTypeDelegate<DefaultArgs>;
+  private productComplementRepository: ProductComplementRepository;
 
-  constructor(workspaceId: number, id = -1) {
+  constructor(workspaceId: number, id?: number) {
     this.workspaceId = workspaceId;
     this.productComplementTypeId = id;
+    this.productComplementRepository = new ProductComplementRepository(
+      id ?? -1
+    );
+
+    const prisma = new PrismaClient();
+    this.model = prisma.productComplementType;
   }
 
   public static transform({
@@ -40,10 +42,10 @@ export class ProductComplementTypeRepository {
     required,
     created_at,
     updated_at,
-    product_complements,
-  }: PrismaProductComplementType & {
-    product_complements?: PrismaProductComplement[];
-  }): ProductComplementType {
+  }: PrismaProductComplementType): Omit<
+    ProductComplementType,
+    "productComplements"
+  > {
     return {
       id,
       name,
@@ -51,63 +53,51 @@ export class ProductComplementTypeRepository {
       required,
       createdAt: created_at.toISOString(),
       updatedAt: updated_at.toISOString(),
-      productComplements: (product_complements ?? []).map(
-        ({ id, increment, is_disabled, name, price }) => ({
-          id,
-          increment,
-          isDisabled: is_disabled,
-          name,
-          price,
-        })
-      ),
     };
   }
 
-  public async addToProduct(productId: number) {
-    await prisma.productProductComplementType.create({
-      data: {
-        product_id: productId,
-        product_complement_type_id: this.productComplementTypeId,
-      },
-    });
-
-    return this.fetch();
-  }
-
   public async index(productId: number): Promise<ProductComplementType[]> {
-    const productProductComplementTypes =
-      await prisma.productProductComplementType.findMany({
-        where: {
-          product_id: {
-            equals: productId,
-          },
-        },
-        include: {
-          product_complement_type: {
-            include: {
-              product_complements: true,
+    const productComplementTypes = await this.model.findMany({
+      where: {
+        product_product_complement_types: {
+          every: {
+            product_id: {
+              equals: productId,
             },
           },
         },
-      });
+      },
+    });
 
-    return productProductComplementTypes.map(({ product_complement_type }) =>
-      ProductComplementTypeRepository.transform(product_complement_type)
-    );
+    return Promise.all(productComplementTypes.map(this.allData.bind(this)));
+  }
+
+  public async fetchComplements(): Promise<ProductComplement[]> {
+    return this.productComplementRepository.index();
+  }
+
+  public async allData(
+    productComplementType: PrismaProductComplementType
+  ): Promise<ProductComplementType> {
+    const productComplements = await this.fetchComplements.bind(this)();
+
+    return {
+      ...ProductComplementTypeRepository.transform(productComplementType),
+      productComplements,
+    };
   }
 
   public async fetch(): Promise<ProductComplementType> {
-    const productComplementType =
-      await prisma.productComplementType.findFirstOrThrow({
-        where: {
-          id: this.productComplementTypeId,
-        },
-        include: {
-          product_complements: true,
-        },
-      });
+    const productComplementType = await this.model.findFirstOrThrow({
+      where: {
+        id: this.productComplementTypeId,
+      },
+      include: {
+        product_complements: true,
+      },
+    });
 
-    return ProductComplementTypeRepository.transform(productComplementType);
+    return this.allData(productComplementType);
   }
 
   public async create({
@@ -119,7 +109,7 @@ export class ProductComplementTypeRepository {
     required: boolean;
     maxSelectable: number;
   }): Promise<ProductComplementType> {
-    const productComplementType = await prisma.productComplementType.create({
+    const productComplementType = await this.model.create({
       data: {
         name,
         max_selectable: maxSelectable,
@@ -130,7 +120,7 @@ export class ProductComplementTypeRepository {
       },
     });
 
-    return ProductComplementTypeRepository.transform(productComplementType);
+    return this.allData(productComplementType);
   }
 
   public async update({
@@ -142,7 +132,7 @@ export class ProductComplementTypeRepository {
     required?: boolean;
     maxSelectable?: number;
   }): Promise<ProductComplementType> {
-    const productComplementType = await prisma.productComplementType.update({
+    const productComplementType = await this.model.update({
       where: {
         id: this.productComplementTypeId,
       },
@@ -156,6 +146,6 @@ export class ProductComplementTypeRepository {
       },
     });
 
-    return ProductComplementTypeRepository.transform(productComplementType);
+    return this.allData(productComplementType);
   }
 }
