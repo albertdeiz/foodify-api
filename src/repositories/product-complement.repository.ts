@@ -15,13 +15,11 @@ export interface ProductComplement {
 }
 
 export class ProductComplementRepository {
-  private productComplementId?: number;
   private productComplementTypeId: number;
   private model: Prisma.ProductComplementDelegate<DefaultArgs>;
 
-  constructor(productComplementTypeId: number, id?: number) {
+  constructor(productComplementTypeId: number) {
     this.productComplementTypeId = productComplementTypeId;
-    this.productComplementId = id;
     this.model = new PrismaClient().productComplement;
   }
 
@@ -44,27 +42,11 @@ export class ProductComplementRepository {
   public async index(): Promise<ProductComplement[]> {
     const productProductComplements = await this.model.findMany({
       where: {
-        product_complement_type_id: {
-          equals: this.productComplementTypeId,
-        },
+        product_complement_type_id: this.productComplementTypeId,
       },
     });
 
     return productProductComplements.map(ProductComplementRepository.transform);
-  }
-
-  public async fetch(): Promise<ProductComplement> {
-    if (!this.productComplementId) {
-      throw new Error("{productComplementId} not defined");
-    }
-
-    const productComplement = await this.model.findFirstOrThrow({
-      where: {
-        id: this.productComplementId,
-      },
-    });
-
-    return ProductComplementRepository.transform(productComplement);
   }
 
   public async create({
@@ -89,22 +71,31 @@ export class ProductComplementRepository {
     return ProductComplementRepository.transform(productComplement);
   }
 
-  public async update({
-    name,
-    isDisabled,
-    price,
-  }: {
-    name?: string;
-    isDisabled?: boolean;
-    price?: number;
-  }): Promise<ProductComplement> {
-    if (!this.productComplementId) {
-      throw new Error("{productComplementId} not defined");
-    }
+  public async fetch(id: number): Promise<ProductComplement> {
+    const productComplement = await this.model.findFirstOrThrow({
+      where: {
+        id,
+      },
+    });
 
+    return ProductComplementRepository.transform(productComplement);
+  }
+
+  public async update(
+    id: number,
+    {
+      name,
+      isDisabled,
+      price,
+    }: {
+      name?: string;
+      isDisabled?: boolean;
+      price?: number;
+    }
+  ): Promise<ProductComplement> {
     const productComplement = await this.model.update({
       where: {
-        id: this.productComplementId,
+        id,
       },
       data: {
         increment: price ? price > 0 : undefined,

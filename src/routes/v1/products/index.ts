@@ -4,8 +4,10 @@ import authenticate from "@/middlewares/authenticate.middleware";
 import { ProductRepository } from "@/repositories/product.repository";
 
 import {
+  createProductComplementSchema,
   createProductComplementTypeSchema,
   createProductSchema,
+  updateProductComplementSchema,
   updateProductComplementTypeSchema,
   updateProductSchema,
 } from "./schemas";
@@ -13,6 +15,7 @@ import {
 import type { Request, Response } from "express";
 import { ProductComplementTypeRepository } from "@/repositories/product-complement-type.repository";
 import { parseError } from "@/utils/error.utils";
+import { ProductComplementRepository } from "@/repositories/product-complement.repository";
 
 const router = express.Router();
 
@@ -26,7 +29,12 @@ router.use(authenticate);
  * [DELETE]  /api/v1/products/{ID}
  *
  * [POST]  /api/v1/products/{ID}/complement-types ✅✅
- * [PATCH]  /api/v1/products/{ID}/complement-types/{ID} ✅
+ * [PATCH]  /api/v1/products/{ID}/complement-types/{ID} ✅✅
+ * [DELETE]  /api/v1/products/{ID}/complement-types/{ID}
+ *
+ * [POST]  /api/v1/products/{ID}/complement-types/{ID}/complements ✅✅
+ * [PATCH]  /api/v1/products/{ID}/complement-types/{ID}/complement/{ID} ✅✅
+ * [DELETE]  /api/v1/products/{ID}/complement-types/{ID}/complement/{ID}
  *
  * [POST]  /api/v1/products/{ID}/categories
  * [DELETE]  /api/v1/products/{ID}/categories
@@ -34,12 +42,9 @@ router.use(authenticate);
 
 router.get("/", async (req: Request, res: Response): Promise<void> => {
   const { workspaceId = -1 } = req;
-  const productId = Number(req.params.id);
-
-  const productRepository = new ProductRepository(workspaceId, productId);
 
   try {
-    const products = await productRepository.index();
+    const products = await new ProductRepository(workspaceId).index();
 
     res.status(200).json({ data: products });
   } catch (e) {
@@ -52,10 +57,8 @@ router.get("/:id", async (req: Request, res: Response): Promise<void> => {
   const { workspaceId = -1 } = req;
   const productId = Number(req.params.id);
 
-  const productRepository = new ProductRepository(workspaceId, productId);
-
   try {
-    const product = await productRepository.fetch();
+    const product = await new ProductRepository(workspaceId).fetch(productId);
 
     res.status(200).json({ data: product });
   } catch (e) {
@@ -67,11 +70,9 @@ router.get("/:id", async (req: Request, res: Response): Promise<void> => {
 router.post("/", async (req: Request, res: Response): Promise<void> => {
   const { workspaceId = -1 } = req;
 
-  const productRepository = new ProductRepository(workspaceId);
-
   try {
     const params = createProductSchema.parse(req.body);
-    const product = await productRepository.create(params);
+    const product = await new ProductRepository(workspaceId).create(params);
 
     res.status(200).json({ data: product });
   } catch (e) {
@@ -83,11 +84,13 @@ router.post("/", async (req: Request, res: Response): Promise<void> => {
 router.patch("/:id", async (req: Request, res: Response): Promise<void> => {
   const { workspaceId = -1 } = req;
   const productId = Number(req.params.id);
-  const productRepository = new ProductRepository(workspaceId, productId);
 
   try {
-    const params = updateProductSchema.parse({ ...req.params, ...req.body });
-    const product = await productRepository.update(params);
+    const params = updateProductSchema.parse(req.body);
+    const product = await new ProductRepository(workspaceId).update(
+      productId,
+      params
+    );
 
     res.status(200).json({ data: product });
   } catch (e) {
@@ -103,13 +106,11 @@ router.post(
     const productId = Number(req.params.id);
 
     try {
-      const params = createProductComplementTypeSchema.parse({
-        ...req.params,
-        ...req.body,
-      });
-      const productRepository = new ProductRepository(workspaceId, productId);
+      const params = createProductComplementTypeSchema.parse(req.body);
 
-      const product = await productRepository.addComplementType(params);
+      await new ProductComplementTypeRepository(productId).create(params);
+
+      const product = await new ProductRepository(workspaceId).fetch(productId);
 
       res.status(200).json({ data: product });
     } catch (e) {
@@ -126,25 +127,68 @@ router.patch(
     const productId = Number(req.params.id);
     const complementTypeId = Number(req.params.complementTypeId);
 
-    const productComplementTypeRepository = new ProductComplementTypeRepository(
-      workspaceId,
-      complementTypeId
-    );
-
     try {
       const params = updateProductComplementTypeSchema.parse(req.body);
 
-      await productComplementTypeRepository.update(params);
+      await new ProductComplementTypeRepository(productId).update(
+        complementTypeId,
+        params
+      );
 
-      const product = await new ProductRepository(
-        workspaceId,
-        productId
-      ).fetch();
+      const product = await new ProductRepository(workspaceId).fetch(productId);
 
       res.status(200).json({ data: product });
     } catch (e) {
       const error = e as Error;
       res.status(404).json({ error: error.message });
+    }
+  }
+);
+
+router.post(
+  "/:id/complement-types/:complementTypeId/complements",
+  async (req: Request, res: Response): Promise<void> => {
+    const { workspaceId = -1 } = req;
+    const productId = Number(req.params.id);
+    const complementTypeId = Number(req.params.complementTypeId);
+
+    try {
+      const params = createProductComplementSchema.parse(req.body);
+
+      await new ProductComplementRepository(complementTypeId).create(params);
+
+      const product = await new ProductRepository(workspaceId).fetch(productId);
+
+      res.status(200).json({ data: product });
+    } catch (e) {
+      const { message } = parseError(e as Error);
+      res.status(404).json({ error: message });
+    }
+  }
+);
+
+router.patch(
+  "/:id/complement-types/:complementTypeId/complements/:complementId",
+  async (req: Request, res: Response): Promise<void> => {
+    const { workspaceId = -1 } = req;
+    const productId = Number(req.params.id);
+    const complementTypeId = Number(req.params.complementTypeId);
+    const complementId = Number(req.params.complementId);
+
+    try {
+      const params = updateProductComplementSchema.parse(req.body);
+
+      await new ProductComplementRepository(complementTypeId).update(
+        complementId,
+        params
+      );
+
+      const product = await new ProductRepository(workspaceId).fetch(productId);
+
+      res.status(200).json({ data: product });
+    } catch (e) {
+      const { message } = parseError(e as Error);
+      res.status(404).json({ error: message });
     }
   }
 );

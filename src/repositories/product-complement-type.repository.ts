@@ -19,20 +19,14 @@ export interface ProductComplementType {
 }
 
 export class ProductComplementTypeRepository {
-  private productComplementTypeId?: number;
-  private workspaceId: number;
+  private productId: number;
   private model: Prisma.ProductComplementTypeDelegate<DefaultArgs>;
-  private productComplementRepository: ProductComplementRepository;
+  private productComplementRepository: typeof ProductComplementRepository;
 
-  constructor(workspaceId: number, id?: number) {
-    this.workspaceId = workspaceId;
-    this.productComplementTypeId = id;
-    this.productComplementRepository = new ProductComplementRepository(
-      id ?? -1
-    );
-
-    const prisma = new PrismaClient();
-    this.model = prisma.productComplementType;
+  constructor(productId: number) {
+    this.productId = productId;
+    this.model = new PrismaClient().productComplementType;
+    this.productComplementRepository = ProductComplementRepository;
   }
 
   public static transform({
@@ -56,13 +50,13 @@ export class ProductComplementTypeRepository {
     };
   }
 
-  public async index(productId: number): Promise<ProductComplementType[]> {
+  public async index(): Promise<ProductComplementType[]> {
     const productComplementTypes = await this.model.findMany({
       where: {
         product_product_complement_types: {
           every: {
             product_id: {
-              equals: productId,
+              equals: this.productId,
             },
           },
         },
@@ -72,32 +66,23 @@ export class ProductComplementTypeRepository {
     return Promise.all(productComplementTypes.map(this.allData.bind(this)));
   }
 
-  public async fetchComplements(): Promise<ProductComplement[]> {
-    return this.productComplementRepository.index();
+  public async fetchComplements(
+    complementTypeId: number
+  ): Promise<ProductComplement[]> {
+    return new this.productComplementRepository(complementTypeId).index();
   }
 
   public async allData(
     productComplementType: PrismaProductComplementType
   ): Promise<ProductComplementType> {
-    const productComplements = await this.fetchComplements.bind(this)();
+    const productComplements = await this.fetchComplements.bind(this)(
+      productComplementType.id
+    );
 
     return {
       ...ProductComplementTypeRepository.transform(productComplementType),
       productComplements,
     };
-  }
-
-  public async fetch(): Promise<ProductComplementType> {
-    const productComplementType = await this.model.findFirstOrThrow({
-      where: {
-        id: this.productComplementTypeId,
-      },
-      include: {
-        product_complements: true,
-      },
-    });
-
-    return this.allData(productComplementType);
   }
 
   public async create({
@@ -123,18 +108,34 @@ export class ProductComplementTypeRepository {
     return this.allData(productComplementType);
   }
 
-  public async update({
-    maxSelectable,
-    name,
-    required,
-  }: {
-    name?: string;
-    required?: boolean;
-    maxSelectable?: number;
-  }): Promise<ProductComplementType> {
+  public async fetch(id: number): Promise<ProductComplementType> {
+    const productComplementType = await this.model.findFirstOrThrow({
+      where: {
+        id,
+      },
+      include: {
+        product_complements: true,
+      },
+    });
+
+    return this.allData(productComplementType);
+  }
+
+  public async update(
+    id: number,
+    {
+      maxSelectable,
+      name,
+      required,
+    }: {
+      name?: string;
+      required?: boolean;
+      maxSelectable?: number;
+    }
+  ): Promise<ProductComplementType> {
     const productComplementType = await this.model.update({
       where: {
-        id: this.productComplementTypeId,
+        id,
       },
       data: {
         max_selectable: maxSelectable,

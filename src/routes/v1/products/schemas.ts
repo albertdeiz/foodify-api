@@ -31,3 +31,15 @@ export const updateProductComplementTypeSchema = object({
   required: boolean().optional(),
   maxSelectable: number().positive().optional(),
 });
+
+export const createProductComplementSchema = object({
+  isDisabled: boolean(),
+  name: string().trim(),
+  price: number().positive(),
+});
+
+export const updateProductComplementSchema = object({
+  isDisabled: boolean().optional(),
+  name: string().trim().optional(),
+  price: number().positive().optional(),
+});

@@ -26,17 +26,13 @@ export interface Product {
  * @todo product_categories
  */
 export class ProductRepository {
-  private productId?: number;
   private workspaceId: number;
-  private productComplementTypeRepository: ProductComplementTypeRepository;
+  private productComplementTypeRepository: typeof ProductComplementTypeRepository;
   private model: Prisma.ProductDelegate<DefaultArgs>;
 
-  constructor(workspaceId: number, id?: number) {
+  constructor(workspaceId: number) {
     this.workspaceId = workspaceId;
-    this.productId = id;
-    this.productComplementTypeRepository = new ProductComplementTypeRepository(
-      this.workspaceId
-    );
+    this.productComplementTypeRepository = ProductComplementTypeRepository;
     this.model = new PrismaClient().product;
   }
 
@@ -74,26 +70,17 @@ export class ProductRepository {
     };
   }
 
-  public async fetchComplementTypes(): Promise<ProductComplementType[]> {
-    if (!this.productId) {
-      throw new Error("{productId} not defined");
-    }
-
-    const productComplementTypes =
-      await this.productComplementTypeRepository.index(this.productId);
-
-    return productComplementTypes;
+  public async fetchComplementTypes(
+    productId: number
+  ): Promise<ProductComplementType[]> {
+    return new this.productComplementTypeRepository(productId).index();
   }
 
-  public async fetchChildren(): Promise<Product[]> {
-    if (!this.productId) {
-      throw new Error("{productId} not defined");
-    }
-
+  public async fetchChildren(productId: number): Promise<Product[]> {
     const rawProducts = await this.model.findMany({
       where: {
         workspace_id: this.workspaceId,
-        parent_product_id: this.productId,
+        parent_product_id: productId,
       },
       include: {
         _count: true,
@@ -120,19 +107,32 @@ export class ProductRepository {
       };
 
       if (productsCount > 0) {
-        iProduct.products = await this.fetchChildren.bind(context)();
+        iProduct.products = await this.fetchChildren.bind(context)(iProduct.id);
       }
 
       if (productComplementTypesCount > 0) {
         iProduct.productComplementTypes = await this.fetchComplementTypes.bind(
           context
-        )();
+        )(iProduct.id);
       }
 
       products.push(iProduct);
     }
 
     return products;
+  }
+
+  private async allData(product: PrismaProduct): Promise<Product> {
+    const productComplementTypes = await this.fetchComplementTypes.bind(this)(
+      product.id
+    );
+    const products = await this.fetchChildren.bind(this)(product.id);
+
+    return {
+      ...ProductRepository.transform(product),
+      productComplementTypes,
+      products,
+    };
   }
 
   public async index(): Promise<Product[]> {
@@ -148,36 +148,6 @@ export class ProductRepository {
       products: [],
       productComplementTypes: [],
     }));
-  }
-
-  public async fetch(): Promise<Product> {
-    if (!this.productId) {
-      throw new Error("{productId} not defined");
-    }
-
-    const product = await this.model.findFirstOrThrow({
-      where: {
-        parent_product_id: null,
-        workspace_id: this.workspaceId,
-        id: this.productId,
-      },
-      include: {
-        products: true,
-      },
-    });
-
-    return this.allData(product);
-  }
-
-  private async allData(product: PrismaProduct): Promise<Product> {
-    const productComplementTypes = await this.fetchComplementTypes.bind(this)();
-    const products = await this.fetchChildren.bind(this)();
-
-    return {
-      ...ProductRepository.transform(product),
-      productComplementTypes,
-      products,
-    };
   }
 
   public async create({
@@ -213,31 +183,45 @@ export class ProductRepository {
     return this.allData(product);
   }
 
-  public async update({
-    content,
-    description,
-    imageUrl,
-    name,
-    parentProductId,
-    price,
-    type,
-  }: {
-    name?: string;
-    description?: string;
-    price?: number;
-    content?: string;
-    imageUrl?: string;
-    parentProductId?: number;
-    type?: string;
-  }): Promise<Product> {
-    if (!this.productId) {
-      throw new Error("{productId} not defined");
-    }
+  public async fetch(id: number): Promise<Product> {
+    const product = await this.model.findFirstOrThrow({
+      where: {
+        parent_product_id: null,
+        workspace_id: this.workspaceId,
+        id,
+      },
+      include: {
+        products: true,
+      },
+    });
 
+    return this.allData(product);
+  }
+
+  public async update(
+    id: number,
+    {
+      content,
+      description,
+      imageUrl,
+      name,
+      parentProductId,
+      price,
+      type,
+    }: {
+      name?: string;
+      description?: string;
+      price?: number;
+      content?: string;
+      imageUrl?: string;
+      parentProductId?: number;
+      type?: string;
+    }
+  ): Promise<Product> {
     const product = await this.model.update({
       where: {
         workspace_id: this.workspaceId,
-        id: this.productId,
+        id,
       },
       data: {
         content,
@@ -247,34 +231,6 @@ export class ProductRepository {
         parent_product_id: parentProductId,
         price,
         type: ProductRepository.sanitizeProductType(type),
-      },
-    });
-
-    return this.allData(product);
-  }
-
-  public async addComplementType(params: {
-    name: string;
-    required: boolean;
-    maxSelectable: number;
-  }): Promise<Product> {
-    if (!this.productId) {
-      throw new Error("{productId} not defined");
-    }
-
-    const productComplementType =
-      await this.productComplementTypeRepository.create(params);
-
-    const product = await this.model.update({
-      where: {
-        id: this.productId,
-      },
-      data: {
-        product_product_complement_types: {
-          create: {
-            product_complement_type_id: productComplementType.id,
-          },
-        },
       },
     });
 
