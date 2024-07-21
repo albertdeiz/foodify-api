@@ -48,8 +48,8 @@ router.get("/", async (req: Request, res: Response): Promise<void> => {
 
     res.status(200).json({ data: products });
   } catch (e) {
-    const error = e as Error;
-    res.status(404).json({ error: error.message });
+    const { message, status } = parseError(e as Error);
+    res.status(status).json({ error: message });
   }
 });
 
@@ -62,8 +62,8 @@ router.get("/:id", async (req: Request, res: Response): Promise<void> => {
 
     res.status(200).json({ data: product });
   } catch (e) {
-    const error = e as Error;
-    res.status(404).json({ error: error.message });
+    const { message, status } = parseError(e as Error);
+    res.status(status).json({ error: message });
   }
 });
 
@@ -76,8 +76,8 @@ router.post("/", async (req: Request, res: Response): Promise<void> => {
 
     res.status(200).json({ data: product });
   } catch (e) {
-    const { message } = parseError(e as Error);
-    res.status(404).json({ error: message });
+    const { message, status } = parseError(e as Error);
+    res.status(status).json({ error: message });
   }
 });
 
@@ -94,8 +94,8 @@ router.patch("/:id", async (req: Request, res: Response): Promise<void> => {
 
     res.status(200).json({ data: product });
   } catch (e) {
-    const { message } = parseError(e as Error);
-    res.status(404).json({ error: message });
+    const { message, status } = parseError(e as Error);
+    res.status(status).json({ error: message });
   }
 });
 
@@ -116,8 +116,8 @@ router.post(
 
       res.status(200).json({ data: product });
     } catch (e) {
-      const { message } = parseError(e as Error);
-      res.status(404).json({ error: message });
+      const { message, status } = parseError(e as Error);
+      res.status(status).json({ error: message });
     }
   }
 );
@@ -141,8 +141,8 @@ router.patch(
 
       res.status(200).json({ data: product });
     } catch (e) {
-      const error = e as Error;
-      res.status(404).json({ error: error.message });
+      const { message, status } = parseError(e as Error);
+      res.status(status).json({ error: message });
     }
   }
 );
@@ -163,8 +163,8 @@ router.post(
 
       res.status(200).json({ data: product });
     } catch (e) {
-      const { message } = parseError(e as Error);
-      res.status(404).json({ error: message });
+      const { message, status } = parseError(e as Error);
+      res.status(status).json({ error: message });
     }
   }
 );
@@ -189,8 +189,8 @@ router.patch(
 
       res.status(200).json({ data: product });
     } catch (e) {
-      const { message } = parseError(e as Error);
-      res.status(404).json({ error: message });
+      const { message, status } = parseError(e as Error);
+      res.status(status).json({ error: message });
     }
   }
 );
