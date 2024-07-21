@@ -22,14 +22,15 @@ model User {
 }
 
 model Workspace {
-  id              Int             @id @default(autoincrement())
-  name            String
-  address         String
-  created_at      DateTime        @default(now())
-  updated_at      DateTime        @updatedAt
-  user_workspaces UserWorkspace[]
-  categories      Category[]
-  products        Product[]
+  id                       Int                     @id @default(autoincrement())
+  name                     String
+  address                  String
+  created_at               DateTime                @default(now())
+  updated_at               DateTime                @updatedAt
+  user_workspaces          UserWorkspace[]
+  categories               Category[]
+  products                 Product[]
+  product_complement_types ProductComplementType[]
 }
 
 model UserWorkspace {
@@ -67,6 +68,8 @@ model ProductComplementType {
   max_selectable                   Int                            @default(1)
   created_at                       DateTime                       @default(now())
   updated_at                       DateTime                       @updatedAt
+  workspace                        Workspace                      @relation(fields: [workspace_id], references: [id])
+  workspace_id                     Int
   product_complements              ProductComplement[]
   product_product_complement_types ProductProductComplementType[]
 }

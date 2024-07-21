@@ -19,11 +19,13 @@ export interface ProductComplementType {
 }
 
 export class ProductComplementTypeRepository {
+  private workspaceId: number;
   private productId: number;
   private model: Prisma.ProductComplementTypeDelegate<DefaultArgs>;
   private productComplementRepository: typeof ProductComplementRepository;
 
-  constructor(productId: number) {
+  constructor(workspaceId: number, productId: number) {
+    this.workspaceId = workspaceId;
     this.productId = productId;
     this.model = new PrismaClient().productComplementType;
     this.productComplementRepository = ProductComplementRepository;
@@ -99,6 +101,7 @@ export class ProductComplementTypeRepository {
         name,
         max_selectable: maxSelectable,
         required,
+        workspace_id: this.workspaceId,
       },
       include: {
         product_complements: true,
@@ -112,6 +115,7 @@ export class ProductComplementTypeRepository {
     const productComplementType = await this.model.findFirstOrThrow({
       where: {
         id,
+        workspace_id: this.workspaceId,
       },
       include: {
         product_complements: true,
@@ -136,6 +140,7 @@ export class ProductComplementTypeRepository {
     const productComplementType = await this.model.update({
       where: {
         id,
+        workspace_id: this.workspaceId,
       },
       data: {
         max_selectable: maxSelectable,

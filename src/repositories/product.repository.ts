@@ -73,7 +73,10 @@ export class ProductRepository {
   public async fetchComplementTypes(
     productId: number
   ): Promise<ProductComplementType[]> {
-    return new this.productComplementTypeRepository(productId).index();
+    return new this.productComplementTypeRepository(
+      this.workspaceId,
+      productId
+    ).index();
   }
 
   public async fetchChildren(productId: number): Promise<Product[]> {

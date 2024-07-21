@@ -108,7 +108,9 @@ router.post(
     try {
       const params = createProductComplementTypeSchema.parse(req.body);
 
-      await new ProductComplementTypeRepository(productId).create(params);
+      await new ProductComplementTypeRepository(workspaceId, productId).create(
+        params
+      );
 
       const product = await new ProductRepository(workspaceId).fetch(productId);
 
@@ -130,7 +132,7 @@ router.patch(
     try {
       const params = updateProductComplementTypeSchema.parse(req.body);
 
-      await new ProductComplementTypeRepository(productId).update(
+      await new ProductComplementTypeRepository(workspaceId, productId).update(
         complementTypeId,
         params
       );

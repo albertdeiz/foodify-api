@@ -37,6 +37,7 @@ async function main() {
       name: "Vegetales",
       required: true,
       max_selectable: 3,
+      workspace_id: workspaceId,
       product_complements: {
         createMany: {
           data: [
@@ -75,6 +76,7 @@ async function main() {
       name: "Carnes",
       required: true,
       max_selectable: 1,
+      workspace_id: workspaceId,
       product_complements: {
         createMany: {
           data: [
@@ -107,6 +109,7 @@ async function main() {
       name: "Embutidos",
       required: false,
       max_selectable: -1,
+      workspace_id: workspaceId,
       product_complements: {
         createMany: {
           data: [
@@ -139,6 +142,7 @@ async function main() {
       name: "Salsas",
       required: false,
       max_selectable: 3,
+      workspace_id: workspaceId,
       product_complements: {
         createMany: {
           data: [

@@ -55,7 +55,9 @@ CREATE TABLE "ProductComplementType" (
     "required" BOOLEAN NOT NULL DEFAULT false,
     "max_selectable" INTEGER NOT NULL DEFAULT 1,
     "created_at" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updated_at" DATETIME NOT NULL
+    "updated_at" DATETIME NOT NULL,
+    "workspace_id" INTEGER NOT NULL,
+    CONSTRAINT "ProductComplementType_workspace_id_fkey" FOREIGN KEY ("workspace_id") REFERENCES "Workspace" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
 );
 
 -- CreateTable
